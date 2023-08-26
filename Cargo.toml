@@ -1,0 +1,11 @@
+[package]
+name = "alioth"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.75"
+smithay = { git = "https://github.com/Smithay/smithay", version = "0.3.0", rev = "e241ccbb" }
+thiserror = "1.0.47"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
