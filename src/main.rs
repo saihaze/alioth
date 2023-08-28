@@ -17,6 +17,7 @@ use std::{os::fd::AsRawFd, sync::Arc, time::Instant};
 
 mod backend;
 mod data;
+mod handlers;
 mod input;
 mod state;
 mod workspace;
