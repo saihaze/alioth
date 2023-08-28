@@ -17,6 +17,7 @@ use std::{os::fd::AsRawFd, sync::Arc, time::Instant};
 
 mod backend;
 mod data;
+mod input;
 mod state;
 mod workspace;
 
@@ -49,7 +50,7 @@ fn init_wayland_socket(event_loop: &mut EventLoop<Data>) -> Result<String, anyho
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logger.
-    // tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt::init();
 
     // Create an event loop.
     let mut event_loop = EventLoop::try_new()?;
@@ -96,9 +97,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let space = Space::default();
 
-    // Initialize backend. The proper backend will be selected automatically.
-    init_backend_auto(&mut event_loop, &dh)?;
-
     // Pack the state.
     let state = State {
         start_time: Instant::now(),
@@ -116,6 +114,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     // Pack the event loop data.
     let mut data = Data { state, display };
+
+    // Initialize backend. The proper backend will be selected automatically.
+    init_backend_auto(&mut event_loop, &dh, &mut data.state)?;
 
     // Set the WAYLAND_DISPLAY environment variable.
     std::env::set_var("WAYLAND_DISPLAY", socket);

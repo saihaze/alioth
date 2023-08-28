@@ -4,8 +4,11 @@ use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     delegate_compositor, delegate_data_device, delegate_output, delegate_seat, delegate_shm,
     delegate_xdg_shell,
-    desktop::{Space, Window},
-    input::{pointer::CursorImageStatus, Seat, SeatHandler, SeatState},
+    desktop::{Space, Window, WindowSurfaceType},
+    input::{
+        pointer::{CursorImageStatus, PointerHandle},
+        Seat, SeatHandler, SeatState,
+    },
     reexports::{
         calloop::LoopSignal,
         wayland_server::{
@@ -13,7 +16,7 @@ use smithay::{
             Client,
         },
     },
-    utils::Serial,
+    utils::{Logical, Point, Serial},
     wayland::{
         buffer::BufferHandler,
         compositor::{
@@ -47,6 +50,22 @@ pub struct State {
     pub seat: Seat<Self>,
 
     pub space: Space<Window>,
+}
+
+impl State {
+    pub fn surface_under_pointer(
+        &self,
+        pointer: &PointerHandle<Self>,
+    ) -> Option<(WlSurface, Point<i32, Logical>)> {
+        let pos = pointer.current_location();
+        self.space
+            .element_under(pos)
+            .and_then(|(window, location)| {
+                window
+                    .surface_under(pos - location.to_f64(), WindowSurfaceType::ALL)
+                    .map(|(surface, point)| (surface, point + location))
+            })
+    }
 }
 
 impl BufferHandler for State {
@@ -83,21 +102,22 @@ impl CompositorHandler for State {
             .space
             .elements()
             .find(|w| w.toplevel().wl_surface() == surface)
-            .unwrap()
-            .clone();
+            .cloned();
 
-        let initial_configure_sent = with_states(surface, |states| {
-            states
-                .data_map
-                .get::<XdgToplevelSurfaceData>()
-                .unwrap()
-                .lock()
-                .unwrap()
-                .initial_configure_sent
-        });
+        if let Some(window) = window {
+            let initial_configure_sent = with_states(surface, |states| {
+                states
+                    .data_map
+                    .get::<XdgToplevelSurfaceData>()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .initial_configure_sent
+            });
 
-        if !initial_configure_sent {
-            window.toplevel().send_configure();
+            if !initial_configure_sent {
+                window.toplevel().send_configure();
+            }
         }
     }
 }

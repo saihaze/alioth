@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use smithay::{
     backend::{
-        input::InputEvent,
         renderer::{
             damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement,
             gles::GlesRenderer,
@@ -24,9 +23,12 @@ use smithay::{
 use crate::{data::Data, state::State};
 use smithay::backend::winit;
 
+const REFRESH_RATE: i32 = 60_000;
+
 pub fn init_winit_backend(
     event_loop: &mut EventLoop<Data>,
     dh: &DisplayHandle,
+    state: &mut State,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (mut backend, mut winit) = winit::init::<GlesRenderer>()?;
 
@@ -34,7 +36,7 @@ pub fn init_winit_backend(
     let mode = output::Mode {
         size,
         // Aka 60Hz.
-        refresh: 60_000,
+        refresh: REFRESH_RATE,
     };
 
     // Properties of the output.
@@ -58,6 +60,7 @@ pub fn init_winit_backend(
     );
     // Set the preferred mode of the output.
     output.set_preferred(mode);
+    state.space.map_output(&output, (0, 0));
 
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
 
@@ -73,20 +76,14 @@ pub fn init_winit_backend(
                     output.change_current_state(
                         Some(output::Mode {
                             size,
-                            refresh: 60_000,
+                            refresh: REFRESH_RATE,
                         }),
                         None,
                         None,
                         None,
                     );
                 }
-                WinitEvent::Input(event) => match event {
-                    InputEvent::Keyboard { event } => {
-                        let _ = event;
-                        tracing::info!("Keyboard event recieved");
-                    }
-                    _ => (),
-                },
+                WinitEvent::Input(event) => state.handle_input(event),
                 _ => (),
             });
             if let Err(WinitError::WindowClosed) = res {
