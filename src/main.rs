@@ -41,7 +41,7 @@ fn init_wayland_socket(event_loop: &mut EventLoop<Data>) -> Result<String, anyho
             {
                 Ok(_) => (),
                 Err(_) => {
-                    tracing::error!("Failed to insert client")
+                    tracing::error!("Failed to insert client");
                 }
             }
         })?;
