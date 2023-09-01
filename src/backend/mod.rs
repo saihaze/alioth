@@ -1,20 +1,41 @@
+mod drm;
 mod winit;
 
-use smithay::reexports::{calloop::EventLoop, wayland_server::DisplayHandle};
+use crate::state::{self};
 
-use crate::{data::Data, state::State};
+use self::winit::run_winit_backend;
 
-use self::winit::init_winit_backend;
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Failed to create Wayland display")]
+    DisplayCreateFailure,
 
-pub enum Backend {
-    Winit,
+    #[error("Failed to create event loop")]
+    EventLoopCreateFailure,
+
+    #[error("No GPU found")]
+    NoGPUFound,
+
+    #[error("Failed to get the path of the primary GPU")]
+    PrimaryGPUGetFailure,
+
+    #[error("Failed to initialize session")]
+    SessionInitFailure,
+
+    #[error("Failed to create Wayland socket")]
+    SocketCreateFailure,
+
+    #[error("Failed to insert source into event loop")]
+    SourceInsertFailure,
+
+    #[error("{0}")]
+    StateCreateFailure(state::Error),
+
+    #[error("Failed to initialize Udev backend")]
+    UdevInitFailure,
 }
 
-pub fn init_backend_auto(
-    event_loop: &mut EventLoop<Data>,
-    dh: &DisplayHandle,
-    state: &mut State,
-) -> Result<Backend, Box<dyn std::error::Error>> {
-    init_winit_backend(event_loop, &dh, state)?;
-    Ok(Backend::Winit)
+pub fn run_backend_auto() -> Result<(), Box<dyn std::error::Error>> {
+    run_winit_backend()?;
+    Ok(())
 }

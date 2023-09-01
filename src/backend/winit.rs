@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{os::fd::AsRawFd, time::Duration};
 
 use smithay::{
     backend::{
@@ -12,24 +12,61 @@ use smithay::{
     output,
     reexports::{
         calloop::{
+            self,
+            generic::Generic,
             timer::{TimeoutAction, Timer},
-            EventLoop,
+            EventLoop, Interest, PostAction,
         },
-        wayland_server::DisplayHandle,
+        wayland_server::Display,
     },
     utils::{Rectangle, Transform},
 };
 
-use crate::{data::Data, state::State};
+use crate::{backend::Error, data::Data, init_wayland_socket, state::State};
 use smithay::backend::winit;
 
 const REFRESH_RATE: i32 = 60_000;
 
-pub fn init_winit_backend(
-    event_loop: &mut EventLoop<Data>,
-    dh: &DisplayHandle,
-    state: &mut State,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
+    let mut event_loop = EventLoop::<Data>::try_new()?;
+    // Create a Wayland display.
+    // Displays are all about the Wayland protocol and do no rendering.
+    let mut display = Display::<State>::new().or_else(|_| {
+        tracing::error!("Failed to create display");
+        Err(Error::DisplayCreateFailure)
+    })?;
+
+    // Create a Unix socket for clients to connect to.
+    let socket = init_wayland_socket(&mut event_loop).or_else(|_| {
+        tracing::error!("Failed to create Wayland socket");
+        Err(Error::SocketCreateFailure)
+    })?;
+
+    // Insert the display to the event loop.
+    // In wlroots, we directly use wl_display's event loop. But now we add it to our own one.
+    event_loop
+        .handle()
+        .insert_source(
+            Generic::new(
+                display.backend().poll_fd().as_raw_fd(),
+                Interest::READ,
+                calloop::Mode::Level,
+            ),
+            |_, _, data| {
+                // Handle the events from the display, once.
+                data.display.dispatch_clients(&mut data.state).unwrap();
+                // Then we continue listening for other events.
+                Ok(PostAction::Continue)
+            },
+        )
+        .or_else(|_| {
+            tracing::error!("Failed to insert the display to the event loop");
+            Err(Error::SourceInsertFailure)
+        })?;
+
+    let dh = display.handle();
+    let mut state = State::new(&display, &mut event_loop)?;
+
     let (mut backend, mut winit) = winit::init::<GlesRenderer>()?;
 
     let size = backend.window_size().physical_size;
@@ -51,7 +88,7 @@ pub fn init_winit_backend(
     // Create an output.
     let output = output::Output::new("alioth".to_string(), physical_properties);
     // An output is also a global object.
-    output.create_global::<State>(dh);
+    output.create_global::<State>(&dh);
     output.change_current_state(
         Some(mode),
         Some(Transform::Flipped180),
@@ -120,6 +157,12 @@ pub fn init_winit_backend(
 
             TimeoutAction::ToDuration(Duration::from_millis(16))
         })?;
+    
+    std::env::set_var("WAYLAND_DISPLAY", &socket);
+    
+    // Pack event loop data.
+    let mut data = Data { display, state };
+    event_loop.run(None, &mut data, |_| {})?;
 
     Ok(())
 }
