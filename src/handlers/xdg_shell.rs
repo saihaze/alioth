@@ -10,7 +10,7 @@ use smithay::{
 
 use crate::state::State;
 
-impl XdgShellHandler for State {
+impl<BackendData> XdgShellHandler for State<BackendData> {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
         &mut self.xdg_shell_state
     }
@@ -28,4 +28,4 @@ impl XdgShellHandler for State {
 
     fn grab(&mut self, _surface: PopupSurface, _seat: WlSeat, _serial: Serial) {}
 }
-delegate_xdg_shell!(State);
+delegate_xdg_shell!(@<BackendData: 'static> State<BackendData>);

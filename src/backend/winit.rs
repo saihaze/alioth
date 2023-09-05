@@ -28,10 +28,10 @@ use smithay::backend::winit;
 const REFRESH_RATE: i32 = 60_000;
 
 pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
-    let mut event_loop = EventLoop::<Data>::try_new()?;
+    let mut event_loop = EventLoop::<Data<()>>::try_new()?;
     // Create a Wayland display.
     // Displays are all about the Wayland protocol and do no rendering.
-    let mut display = Display::<State>::new().or_else(|_| {
+    let mut display = Display::<State<()>>::new().or_else(|_| {
         tracing::error!("Failed to create display");
         Err(Error::DisplayCreateFailure)
     })?;
@@ -65,7 +65,8 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
         })?;
 
     let dh = display.handle();
-    let mut state = State::new(&display, &mut event_loop)?;
+    let mut state =
+        State::new(&display, &mut event_loop, ()).map_err(|e| Error::StateCreateFailure(e))?;
 
     let (mut backend, mut winit) = winit::init::<GlesRenderer>()?;
 
@@ -88,7 +89,7 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
     // Create an output.
     let output = output::Output::new("alioth".to_string(), physical_properties);
     // An output is also a global object.
-    output.create_global::<State>(&dh);
+    output.create_global::<State<()>>(&dh);
     output.change_current_state(
         Some(mode),
         Some(Transform::Flipped180),
@@ -157,9 +158,9 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
 
             TimeoutAction::ToDuration(Duration::from_millis(16))
         })?;
-    
+
     std::env::set_var("WAYLAND_DISPLAY", &socket);
-    
+
     // Pack event loop data.
     let mut data = Data { display, state };
     event_loop.run(None, &mut data, |_| {})?;

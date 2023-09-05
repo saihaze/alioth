@@ -13,7 +13,7 @@ use smithay::{
 
 use crate::{data::ClientData, state::State};
 
-impl CompositorHandler for State {
+impl<BackendData> CompositorHandler for State<BackendData> {
     fn compositor_state(&mut self) -> &mut CompositorState {
         &mut self.compositor_state
     }
@@ -62,4 +62,4 @@ impl CompositorHandler for State {
         }
     }
 }
-delegate_compositor!(State);
+delegate_compositor!(@<BackendData: 'static> State<BackendData>);

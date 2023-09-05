@@ -12,7 +12,7 @@ use smithay::{
 
 use crate::state::State;
 
-impl State {
+impl<BackendData> State<BackendData> {
     pub fn handle_input<B>(&mut self, event: InputEvent<B>)
     where
         B: InputBackend,

@@ -12,7 +12,9 @@ mod state;
 mod workspace;
 
 /// Create a Unix socket for the Wayland server.
-fn init_wayland_socket(event_loop: &mut EventLoop<Data>) -> Result<String, anyhow::Error> {
+fn init_wayland_socket<BackendData>(
+    event_loop: &mut EventLoop<Data<BackendData>>,
+) -> Result<String, anyhow::Error> {
     // Create the socket.
     let socket = ListeningSocketSource::new_auto()?;
     // Get the socket name to be returned.
@@ -39,6 +41,9 @@ fn init_wayland_socket(event_loop: &mut EventLoop<Data>) -> Result<String, anyho
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logger.
+    tracing_subscriber::fmt().init();
+
     run_backend_auto()?;
 
     Ok(())

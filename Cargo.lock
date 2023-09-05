@@ -7,7 +7,10 @@ name = "alioth"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "drm",
+ "drm-fourcc",
  "smithay",
+ "smithay-drm-extras",
  "thiserror",
  "tracing",
  "tracing-subscriber",
@@ -274,6 +277,12 @@ checksum = "1369f1679d6b706d234c4c1e0613c415c2c74b598a09ad28080ba2474b72e42d"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "edid-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ab5fa33485cd85ac354df485819a63360fefa312fe04cffe65e6f175be1522c"
 
 [[package]]
 name = "encoding"
@@ -1139,6 +1148,15 @@ dependencies = [
  "wayland-client",
  "wayland-cursor",
  "wayland-protocols 0.29.5",
+]
+
+[[package]]
+name = "smithay-drm-extras"
+version = "0.1.0"
+source = "git+https://github.com/Smithay/smithay#5f1674cc825881f88d9ad6d684cc4f58e344be40"
+dependencies = [
+ "drm",
+ "edid-rs",
 ]
 
 [[package]]

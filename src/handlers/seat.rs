@@ -6,7 +6,7 @@ use smithay::{
 
 use crate::state::State;
 
-impl SeatHandler for State {
+impl<BackendData: 'static> SeatHandler for State<BackendData> {
     type KeyboardFocus = WlSurface;
     type PointerFocus = WlSurface;
 
@@ -16,4 +16,4 @@ impl SeatHandler for State {
 
     fn cursor_image(&mut self, _seat: &Seat<Self>, _image: CursorImageStatus) {}
 }
-delegate_seat!(State);
+delegate_seat!(@<BackendData: 'static> State<BackendData>);

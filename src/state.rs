@@ -18,20 +18,11 @@ use crate::data::Data;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Failed to create Wayland display")]
-    DisplayCreateFailure,
-
     #[error("Failed to add keyboard")]
     KeyboardAddFailure,
-
-    #[error("Failed to init Wayland socket")]
-    SocketCreateFailure,
-
-    #[error("Failed to insert source into event loop")]
-    SourceInsertFailure,
 }
 
-pub struct State {
+pub struct State<BackendData: 'static> {
     pub start_time: Instant,
     pub loop_signal: LoopSignal,
 
@@ -44,22 +35,28 @@ pub struct State {
     pub seat: Seat<Self>,
 
     pub space: Space<Window>,
+
+    pub backend_data: BackendData,
 }
 
-impl State {
-    pub fn new(display: &Display<Self>, event_loop: &mut EventLoop<Data>) -> Result<Self, Error> {
+impl<BackendData> State<BackendData> {
+    pub fn new(
+        display: &Display<Self>,
+        event_loop: &mut EventLoop<Data<BackendData>>,
+        backend_data: BackendData,
+    ) -> Result<Self, Error> {
         // Get the display handle. Again: it is just related to the Wayland protocol and has nothing to
         // do with the backend.
         let dh = display.handle();
 
         // Used to compose.
-        let compositor_state = CompositorState::new::<State>(&dh);
+        let compositor_state = CompositorState::new::<Self>(&dh);
         // Used to create shared memory buffers.
-        let shm_state = ShmState::new::<State>(&dh, vec![]);
-        let output_manager_state = OutputManagerState::new_with_xdg_output::<State>(&dh);
-        let xdg_shell_state = XdgShellState::new::<State>(&dh);
+        let shm_state = ShmState::new::<Self>(&dh, vec![]);
+        let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&dh);
+        let xdg_shell_state = XdgShellState::new::<Self>(&dh);
         let mut seat_state = SeatState::new();
-        let data_device_state = DataDeviceState::new::<State>(&dh);
+        let data_device_state = DataDeviceState::new::<Self>(&dh);
 
         let mut seat = seat_state.new_wl_seat(&dh, "alioth");
         // FIXME: Implement hot-plug
@@ -86,6 +83,8 @@ impl State {
             seat,
 
             space,
+
+            backend_data,
         };
 
         Ok(state)

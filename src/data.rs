@@ -5,9 +5,9 @@ use smithay::{
 
 use crate::state::State;
 
-pub struct Data {
-    pub display: Display<State>,
-    pub state: State,
+pub struct Data<BackendData: 'static> {
+    pub display: Display<State<BackendData>>,
+    pub state: State<BackendData>,
 }
 
 #[derive(Default)]

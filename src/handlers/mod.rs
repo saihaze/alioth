@@ -16,26 +16,26 @@ mod compositor;
 mod seat;
 mod xdg_shell;
 
-impl BufferHandler for State {
+impl<BackendData> BufferHandler for State<BackendData> {
     fn buffer_destroyed(&mut self, _buffer: &WlBuffer) {}
 }
 
-impl ShmHandler for State {
+impl<BackendData> ShmHandler for State<BackendData> {
     fn shm_state(&self) -> &ShmState {
         &self.shm_state
     }
 }
-delegate_shm!(State);
-delegate_output!(State);
+delegate_shm!(@<BackendData: 'static> State<BackendData>);
+delegate_output!(@<BackendData: 'static> State<BackendData>);
 
-impl ClientDndGrabHandler for State {}
-impl ServerDndGrabHandler for State {}
+impl<BackendData: 'static> ClientDndGrabHandler for State<BackendData> {}
+impl<BackendData: 'static> ServerDndGrabHandler for State<BackendData> {}
 
-impl DataDeviceHandler for State {
+impl<BackendData: 'static> DataDeviceHandler for State<BackendData> {
     type SelectionUserData = ();
 
     fn data_device_state(&self) -> &DataDeviceState {
         &self.data_device_state
     }
 }
-delegate_data_device!(State);
+delegate_data_device!(@<BackendData: 'static> State<BackendData>);
