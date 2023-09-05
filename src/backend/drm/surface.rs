@@ -3,19 +3,21 @@ use std::collections::HashSet;
 use crate::backend::Error;
 use drm::control::{connector, crtc, ModeTypeFlags};
 use drm_fourcc::{DrmFormat, DrmFourcc};
-use smithay::backend::allocator::{dmabuf::Dmabuf, gbm::GbmBufferFlags};
-use smithay::backend::renderer::element::memory::MemoryRenderBufferRenderElement;
-use smithay::backend::renderer::{Bind, ImportMem, Renderer};
-use smithay::desktop::space::render_output;
-use smithay::output::{Mode, PhysicalProperties, Scale, Subpixel};
-use smithay::utils::Transform;
+
 use smithay::{
     backend::{
-        allocator::gbm::{GbmAllocator, GbmDevice},
+        allocator::{
+            dmabuf::Dmabuf,
+            gbm::{GbmAllocator, GbmBufferFlags, GbmDevice},
+        },
         drm::{DrmDevice, DrmDeviceFd, GbmBufferedSurface},
-        renderer::damage::OutputDamageTracker,
+        renderer::{
+            damage::OutputDamageTracker, element::memory::MemoryRenderBufferRenderElement, Bind,
+            ImportMem, Renderer,
+        },
     },
-    output::Output,
+    output::{Mode, Output, PhysicalProperties, Scale, Subpixel},
+    utils::Transform,
 };
 use smithay_drm_extras::edid::EdidInfo;
 
