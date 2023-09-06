@@ -137,7 +137,7 @@ pub fn run_drm_backend() -> Result<(), Error> {
     };
     let mut state = State::new(&display, &mut event_loop, backend_data)
         .map_err(|err| Error::StateCreateFailure(err))?;
-    
+
     let dh = display.handle();
 
     // Initialize the udev backend.
@@ -146,10 +146,13 @@ pub fn run_drm_backend() -> Result<(), Error> {
         Err(Error::UdevInitFailure)
     })?;
     for (device_id, path) in udev_backend.device_list() {
-        state.on_udev_event(&dh, UdevEvent::Added {
-            device_id,
-            path: path.to_owned(),
-        });
+        state.on_udev_event(
+            &dh,
+            UdevEvent::Added {
+                device_id,
+                path: path.to_owned(),
+            },
+        );
     }
 
     // Initialize the libinput backend.

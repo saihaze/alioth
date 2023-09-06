@@ -1,5 +1,8 @@
 use drm_fourcc::DrmFourcc;
-use smithay::{backend::drm::{DrmEvent, DrmNode}, reexports::wayland_server::DisplayHandle};
+use smithay::{
+    backend::drm::{DrmEvent, DrmNode},
+    reexports::wayland_server::DisplayHandle,
+};
 use smithay_drm_extras::drm_scanner::DrmScanEvent;
 
 use crate::{
@@ -45,7 +48,12 @@ impl State<DrmData> {
         }
     }
 
-    pub fn on_drm_connector_event(&mut self, dh: &DisplayHandle,node: DrmNode, event: DrmScanEvent) {
+    pub fn on_drm_connector_event(
+        &mut self,
+        dh: &DisplayHandle,
+        node: DrmNode,
+        event: DrmScanEvent,
+    ) {
         let device = if let Some(device) = self.backend_data.devices.get_mut(&node) {
             device
         } else {
