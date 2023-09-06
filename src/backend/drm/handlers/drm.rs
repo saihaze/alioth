@@ -1,5 +1,5 @@
 use drm_fourcc::DrmFourcc;
-use smithay::backend::drm::{DrmEvent, DrmNode};
+use smithay::{backend::drm::{DrmEvent, DrmNode}, reexports::wayland_server::DisplayHandle};
 use smithay_drm_extras::drm_scanner::DrmScanEvent;
 
 use crate::{
@@ -37,7 +37,7 @@ impl State<DrmData> {
                                 .unwrap()
                         };
                         surface.gbm_surface.frame_submitted().unwrap();
-                        surface.next_buffer(&mut renderer);
+                        surface.next_buffer(&self.space, &mut renderer);
                     }
                 }
             }
@@ -45,7 +45,7 @@ impl State<DrmData> {
         }
     }
 
-    pub fn on_drm_connector_event(&mut self, node: DrmNode, event: DrmScanEvent) {
+    pub fn on_drm_connector_event(&mut self, dh: &DisplayHandle,node: DrmNode, event: DrmScanEvent) {
         let device = if let Some(device) = self.backend_data.devices.get_mut(&node) {
             device
         } else {
@@ -64,6 +64,7 @@ impl State<DrmData> {
                     .unwrap();
 
                 let mut surface = OutputSurface::new(
+                    dh,
                     crtc,
                     &connector,
                     SUPPORTED_FORMATS,
@@ -76,9 +77,10 @@ impl State<DrmData> {
                     device.gbm.clone(),
                 )
                 .unwrap();
-
-                surface.next_buffer(&mut renderer);
+                let output = surface.output.clone();
+                surface.next_buffer(&self.space, &mut renderer);
                 device.surfaces.insert(crtc, surface);
+                self.map_output_on_the_right(output);
             }
             DrmScanEvent::Disconnected {
                 crtc: Some(crtc), ..

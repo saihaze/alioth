@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::backend::Error;
+use crate::{backend::Error, state::State};
 use drm::control::{connector, crtc, ModeTypeFlags};
 use drm_fourcc::{DrmFormat, DrmFourcc};
 
@@ -12,14 +12,18 @@ use smithay::{
         },
         drm::{DrmDevice, DrmDeviceFd, GbmBufferedSurface},
         renderer::{
-            damage::OutputDamageTracker, element::memory::MemoryRenderBufferRenderElement, Bind,
-            ImportMem, Renderer,
+            damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement, Bind,
+            ImportAll, Renderer,
         },
     },
+    desktop::{space::render_output, Space, Window},
     output::{Mode, Output, PhysicalProperties, Scale, Subpixel},
+    reexports::wayland_server::DisplayHandle,
     utils::Transform,
 };
 use smithay_drm_extras::edid::EdidInfo;
+
+use super::DrmData;
 
 pub struct OutputSurface {
     pub gbm_surface: GbmBufferedSurface<GbmAllocator<DrmDeviceFd>, ()>,
@@ -29,6 +33,7 @@ pub struct OutputSurface {
 
 impl OutputSurface {
     pub fn new(
+        dh: &DisplayHandle,
         crtc: crtc::Handle,
         connector: &connector::Info,
         color_formats: &[DrmFourcc],
@@ -87,6 +92,7 @@ impl OutputSurface {
 
         let output_mode = Mode::from(preferred_mode);
         output.set_preferred(output_mode);
+        output.create_global::<State<DrmData>>(&dh);
         output.change_current_state(
             Some(output_mode),
             Some(Transform::Normal),
@@ -104,24 +110,26 @@ impl OutputSurface {
         })
     }
 
-    pub fn next_buffer<R>(&mut self, renderer: &mut R)
+    pub fn next_buffer<R>(&mut self, space: &Space<Window>, renderer: &mut R)
     where
-        R: Renderer + ImportMem + Bind<Dmabuf>,
+        R: Renderer + ImportAll + Bind<Dmabuf>,
         R::TextureId: 'static,
     {
         let dmabuf = self.gbm_surface.next_buffer().unwrap().0;
         renderer.bind(dmabuf).unwrap();
 
-        let res = self
-            .damage_tracked_renderer
-            .render_output::<MemoryRenderBufferRenderElement<R>, _>(
-                renderer,
-                0,
-                &[],
-                [0.1, 0.1, 0.1, 1.0],
-            )
-            .unwrap();
-        //let res = render_output(&self.output, &mut renderer, 1.0, 0, &[self.], custom_elements, damage_tracker, clear_color);
+        let res = render_output::<_, WaylandSurfaceRenderElement<R>, _, _>(
+            &self.output,
+            renderer,
+            1.0,
+            0,
+            [space],
+            &[],
+            &mut self.damage_tracked_renderer,
+            [0.1, 0.1, 0.1, 1.0],
+        )
+        .unwrap();
+        tracing::info!("Damage: {:?}", res);
 
         self.gbm_surface.queue_buffer(None, res.damage, ()).ok();
     }

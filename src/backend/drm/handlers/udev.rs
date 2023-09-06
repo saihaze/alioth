@@ -15,22 +15,22 @@ use smithay::{
         session::Session,
         udev::UdevEvent,
     },
-    reexports::nix::fcntl::OFlag,
+    reexports::{nix::fcntl::OFlag, wayland_server::DisplayHandle},
     utils::DeviceFd,
 };
 use smithay_drm_extras::drm_scanner::DrmScanner;
 
 impl State<DrmData> {
-    pub fn on_udev_event(&mut self, event: UdevEvent) {
+    pub fn on_udev_event(&mut self, dh: &DisplayHandle, event: UdevEvent) {
         match event {
             UdevEvent::Added { device_id, path } => {
                 if let Ok(node) = DrmNode::from_dev_id(device_id) {
-                    self.on_device_added(node, path);
+                    self.on_device_added(dh, node, path);
                 }
             }
             UdevEvent::Changed { device_id } => {
                 if let Ok(node) = DrmNode::from_dev_id(device_id) {
-                    self.on_device_changed(node);
+                    self.on_device_changed(dh, node);
                 }
             }
             UdevEvent::Removed { device_id } => {
@@ -41,7 +41,7 @@ impl State<DrmData> {
         }
     }
 
-    fn on_device_added(&mut self, node: DrmNode, path: PathBuf) {
+    fn on_device_added(&mut self, dh: &DisplayHandle, node: DrmNode, path: PathBuf) {
         let fd = self
             .backend_data
             .session
@@ -91,13 +91,13 @@ impl State<DrmData> {
             },
         );
 
-        self.on_device_changed(node);
+        self.on_device_changed(dh, node);
     }
 
-    fn on_device_changed(&mut self, node: DrmNode) {
+    fn on_device_changed(&mut self, dh: &DisplayHandle, node: DrmNode) {
         if let Some(device) = self.backend_data.devices.get_mut(&node) {
             for event in device.drm_scanner.scan_connectors(&device.drm) {
-                self.on_drm_connector_event(node, event);
+                self.on_drm_connector_event(dh, node, event);
             }
         }
     }

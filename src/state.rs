@@ -3,6 +3,7 @@ use std::time::Instant;
 use smithay::{
     desktop::{Space, Window, WindowSurfaceType},
     input::{pointer::PointerHandle, Seat, SeatState},
+    output::Output,
     reexports::{
         calloop::{EventLoop, LoopSignal},
         wayland_server::{protocol::wl_surface::WlSurface, Display},
@@ -102,5 +103,12 @@ impl<BackendData> State<BackendData> {
                     .surface_under(pos - location.to_f64(), WindowSurfaceType::ALL)
                     .map(|(surface, point)| (surface, point + location))
             })
+    }
+
+    pub fn map_output_on_the_right(&mut self, output: Output) {
+        let x = self.space.outputs().fold(0, |sum, output| {
+            sum + self.space.output_geometry(output).unwrap().size.w
+        });
+        self.space.map_output(&output, (x, 0));
     }
 }

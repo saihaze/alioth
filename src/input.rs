@@ -36,11 +36,14 @@ impl<BackendData> State<BackendData> {
                 }
             }
             InputEvent::PointerMotionAbsolute { event } => {
-                let output = self.space.outputs().next().unwrap();
-                let output_geo = self.space.output_geometry(output).unwrap();
-                let pos = event.position_transformed(output_geo.size) + output_geo.loc.to_f64();
-
                 if let Some(pointer) = self.seat.get_pointer() {
+                    let output = match self.space.output_under(pointer.current_location()).next() {
+                        Some(output) => output.clone(),
+                        None => return,
+                    };
+                    let output_geo = self.space.output_geometry(&output).unwrap();
+                    let pos = event.position_transformed(output_geo.size) + output_geo.loc.to_f64();
+
                     let serial = SERIAL_COUNTER.next_serial();
                     let under = self.surface_under_pointer(&pointer);
                     pointer.motion(

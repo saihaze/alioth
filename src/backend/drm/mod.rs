@@ -10,6 +10,7 @@ use smithay::{
             gbm::{GbmAllocator, GbmDevice},
         },
         drm::{DrmDevice, DrmDeviceFd, DrmEvent, DrmNode, NodeType},
+        input::InputEvent,
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
             gles::GlesRenderer,
@@ -136,6 +137,8 @@ pub fn run_drm_backend() -> Result<(), Error> {
     };
     let mut state = State::new(&display, &mut event_loop, backend_data)
         .map_err(|err| Error::StateCreateFailure(err))?;
+    
+    let dh = display.handle();
 
     // Initialize the udev backend.
     let udev_backend = UdevBackend::new(&state.backend_data.session.seat()).or_else(|_| {
@@ -143,7 +146,7 @@ pub fn run_drm_backend() -> Result<(), Error> {
         Err(Error::UdevInitFailure)
     })?;
     for (device_id, path) in udev_backend.device_list() {
-        state.on_udev_event(UdevEvent::Added {
+        state.on_udev_event(&dh, UdevEvent::Added {
             device_id,
             path: path.to_owned(),
         });
@@ -165,6 +168,12 @@ pub fn run_drm_backend() -> Result<(), Error> {
     event_loop
         .handle()
         .insert_source(libinput_backend, move |event, _, data| {
+            match event {
+                InputEvent::Keyboard { .. } => {
+                    data.state.backend_data.session.change_vt(2).ok();
+                }
+                _ => (),
+            }
             data.state.handle_input(event);
         })
         .map_err(|_| Error::SourceInsertFailure)?;
@@ -211,7 +220,7 @@ pub fn run_drm_backend() -> Result<(), Error> {
     event_loop
         .handle()
         .insert_source(udev_backend, |event, _, data| {
-            data.state.on_udev_event(event);
+            data.state.on_udev_event(&data.display.handle(), event);
         })
         .map_err(|_| Error::SourceInsertFailure)?;
 
@@ -219,7 +228,7 @@ pub fn run_drm_backend() -> Result<(), Error> {
 
     event_loop
         .handle()
-        .insert_source(Timer::from_duration(Duration::from_secs(10)), |_, _, _| {
+        .insert_source(Timer::from_duration(Duration::from_secs(30)), |_, _, _| {
             panic!("Aborted");
         })
         .unwrap();
