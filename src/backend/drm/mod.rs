@@ -237,7 +237,9 @@ pub fn run_drm_backend() -> Result<(), Error> {
         .unwrap();
 
     let mut data = Data { display, state };
-    event_loop.run(None, &mut data, |_| {}).unwrap();
+    event_loop.run(None, &mut data, |data| {
+        data.display.flush_clients().unwrap();
+    }).unwrap();
 
     Ok(())
 }
