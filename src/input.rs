@@ -4,7 +4,7 @@ use smithay::{
         PointerButtonEvent,
     },
     input::{
-        keyboard::FilterResult,
+        keyboard::{xkb, FilterResult, Keysym},
         pointer::{ButtonEvent, MotionEvent},
     },
     utils::SERIAL_COUNTER,
@@ -12,8 +12,13 @@ use smithay::{
 
 use crate::state::State;
 
+pub enum Action {
+    None,
+    ChangeVt(i32),
+}
+
 impl<BackendData> State<BackendData> {
-    pub fn handle_input<B>(&mut self, event: InputEvent<B>)
+    pub fn handle_input<B>(&mut self, event: InputEvent<B>) -> Action
     where
         B: InputBackend,
     {
@@ -25,21 +30,30 @@ impl<BackendData> State<BackendData> {
                 let time = Event::time_msec(&event);
 
                 if let Some(keyboard) = self.seat.get_keyboard() {
-                    keyboard.input::<(), _>(
-                        self,
-                        event.key_code(),
-                        event.state(),
-                        serial,
-                        time,
-                        |_, _, _| FilterResult::Forward,
-                    );
+                    let action = keyboard
+                        .input::<Action, _>(
+                            self,
+                            event.key_code(),
+                            event.state(),
+                            serial,
+                            time,
+                            |_, _, handler| {
+                                let sym = handler.modified_sym();
+                                if let Some(action) = process_keyboard_shortcut(sym) {
+                                    return FilterResult::Intercept(action);
+                                }
+                                FilterResult::Forward
+                            },
+                        )
+                        .unwrap_or(Action::None);
+                    return action;
                 }
             }
             InputEvent::PointerMotionAbsolute { event } => {
                 if let Some(pointer) = self.seat.get_pointer() {
                     let output = match self.space.output_under(pointer.current_location()).next() {
                         Some(output) => output.clone(),
-                        None => return,
+                        None => return Action::None,
                     };
                     let output_geo = self.space.output_geometry(&output).unwrap();
                     let pos = event.position_transformed(output_geo.size) + output_geo.loc.to_f64();
@@ -105,5 +119,16 @@ impl<BackendData> State<BackendData> {
             }
             _ => (),
         }
+        Action::None
+    }
+}
+
+fn process_keyboard_shortcut(keysym: Keysym) -> Option<Action> {
+    if (xkb::KEY_XF86Switch_VT_1..=xkb::KEY_XF86Switch_VT_12).contains(&keysym) {
+        Some(Action::ChangeVt(
+            (keysym - xkb::KEY_XF86Switch_VT_1 + 1) as i32,
+        ))
+    } else {
+        None
     }
 }

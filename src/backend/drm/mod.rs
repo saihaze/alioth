@@ -10,7 +10,6 @@ use smithay::{
             gbm::{GbmAllocator, GbmDevice},
         },
         drm::{DrmDevice, DrmDeviceFd, DrmEvent, DrmNode, NodeType},
-        input::InputEvent,
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
             gles::GlesRenderer,
@@ -31,7 +30,7 @@ use smithay_drm_extras::drm_scanner::DrmScanner;
 use std::os::fd::AsRawFd;
 use std::{collections::HashMap, time::Duration};
 
-use crate::{data::Data, init_wayland_socket, state::State};
+use crate::{data::Data, init_wayland_socket, input::Action, state::State};
 
 use self::surface::OutputSurface;
 
@@ -171,13 +170,13 @@ pub fn run_drm_backend() -> Result<(), Error> {
     event_loop
         .handle()
         .insert_source(libinput_backend, move |event, _, data| {
-            match event {
-                InputEvent::Keyboard { .. } => {
-                    data.state.backend_data.session.change_vt(2).ok();
+            let action = data.state.handle_input(event);
+            match action {
+                Action::ChangeVt(vt) => {
+                    data.state.backend_data.session.change_vt(vt).ok();
                 }
-                _ => (),
+                Action::None => (),
             }
-            data.state.handle_input(event);
         })
         .map_err(|_| Error::SourceInsertFailure)?;
 

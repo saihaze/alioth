@@ -22,7 +22,7 @@ use smithay::{
     utils::{Rectangle, Transform},
 };
 
-use crate::{backend::Error, data::Data, init_wayland_socket, state::State};
+use crate::{backend::Error, data::Data, init_wayland_socket, input::Action, state::State};
 use smithay::backend::winit;
 
 const REFRESH_RATE: i32 = 60_000;
@@ -121,7 +121,12 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
                         None,
                     );
                 }
-                WinitEvent::Input(event) => state.handle_input(event),
+                WinitEvent::Input(event) => {
+                    let action = state.handle_input(event);
+                    match action {
+                        Action::ChangeVt(_) | Action::None => (),
+                    }
+                }
                 _ => (),
             });
             if let Err(WinitError::WindowClosed) = res {
