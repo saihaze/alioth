@@ -31,7 +31,6 @@ impl<BackendData> State<BackendData> {
                 let time = Event::time_msec(&event);
 
                 if let Some(keyboard) = self.seat.get_keyboard() {
-                    let modifiers = keyboard.modifier_state();
                     let action = keyboard
                         .input::<Action, _>(
                             self,
@@ -39,7 +38,7 @@ impl<BackendData> State<BackendData> {
                             event.state(),
                             serial,
                             time,
-                            |_, _, handler| {
+                            |_, modifiers, handler| {
                                 let sym = handler.modified_sym();
                                 if let Some(action) = process_keyboard_shortcut(modifiers, sym) {
                                     return FilterResult::Intercept(action);
@@ -125,7 +124,7 @@ impl<BackendData> State<BackendData> {
     }
 }
 
-fn process_keyboard_shortcut(modifiers: ModifiersState, keysym: Keysym) -> Option<Action> {
+fn process_keyboard_shortcut(modifiers: &ModifiersState, keysym: Keysym) -> Option<Action> {
     if keysym == xkb::KEY_BackSpace && modifiers.ctrl && modifiers.alt {
         Some(Action::Quit)
     } else if (xkb::KEY_XF86Switch_VT_1..=xkb::KEY_XF86Switch_VT_12).contains(&keysym) {
