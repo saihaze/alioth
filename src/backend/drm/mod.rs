@@ -19,16 +19,14 @@ use smithay::{
         udev::{primary_gpu, UdevBackend, UdevEvent},
     },
     reexports::{
-        calloop::{
-            self, generic::Generic, timer::Timer, EventLoop, Interest, LoopHandle, PostAction,
-        },
+        calloop::{self, generic::Generic, EventLoop, Interest, LoopHandle, PostAction},
         input::Libinput,
         wayland_server::Display,
     },
 };
 use smithay_drm_extras::drm_scanner::DrmScanner;
+use std::collections::HashMap;
 use std::os::fd::AsRawFd;
-use std::{collections::HashMap, time::Duration};
 
 use crate::{data::Data, init_wayland_socket, input::Action, state::State};
 
@@ -175,6 +173,9 @@ pub fn run_drm_backend() -> Result<(), Error> {
                 Action::ChangeVt(vt) => {
                     data.state.backend_data.session.change_vt(vt).ok();
                 }
+                Action::Quit => {
+                    data.state.loop_signal.stop();
+                }
                 Action::None => (),
             }
         })
@@ -227,13 +228,6 @@ pub fn run_drm_backend() -> Result<(), Error> {
         .map_err(|_| Error::SourceInsertFailure)?;
 
     std::env::set_var("WAYLAND_DISPLAY", &socket);
-
-    event_loop
-        .handle()
-        .insert_source(Timer::from_duration(Duration::from_secs(30)), |_, _, _| {
-            panic!("Aborted");
-        })
-        .unwrap();
 
     let mut data = Data { display, state };
     event_loop

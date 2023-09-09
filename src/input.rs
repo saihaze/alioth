@@ -4,7 +4,7 @@ use smithay::{
         PointerButtonEvent,
     },
     input::{
-        keyboard::{xkb, FilterResult, Keysym},
+        keyboard::{xkb, FilterResult, Keysym, ModifiersState},
         pointer::{ButtonEvent, MotionEvent},
     },
     utils::SERIAL_COUNTER,
@@ -15,6 +15,7 @@ use crate::state::State;
 pub enum Action {
     None,
     ChangeVt(i32),
+    Quit,
 }
 
 impl<BackendData> State<BackendData> {
@@ -30,6 +31,7 @@ impl<BackendData> State<BackendData> {
                 let time = Event::time_msec(&event);
 
                 if let Some(keyboard) = self.seat.get_keyboard() {
+                    let modifiers = keyboard.modifier_state();
                     let action = keyboard
                         .input::<Action, _>(
                             self,
@@ -39,7 +41,7 @@ impl<BackendData> State<BackendData> {
                             time,
                             |_, _, handler| {
                                 let sym = handler.modified_sym();
-                                if let Some(action) = process_keyboard_shortcut(sym) {
+                                if let Some(action) = process_keyboard_shortcut(modifiers, sym) {
                                     return FilterResult::Intercept(action);
                                 }
                                 FilterResult::Forward
@@ -123,8 +125,10 @@ impl<BackendData> State<BackendData> {
     }
 }
 
-fn process_keyboard_shortcut(keysym: Keysym) -> Option<Action> {
-    if (xkb::KEY_XF86Switch_VT_1..=xkb::KEY_XF86Switch_VT_12).contains(&keysym) {
+fn process_keyboard_shortcut(modifiers: ModifiersState, keysym: Keysym) -> Option<Action> {
+    if keysym == xkb::KEY_BackSpace && modifiers.ctrl && modifiers.alt {
+        Some(Action::Quit)
+    } else if (xkb::KEY_XF86Switch_VT_1..=xkb::KEY_XF86Switch_VT_12).contains(&keysym) {
         Some(Action::ChangeVt(
             (keysym - xkb::KEY_XF86Switch_VT_1 + 1) as i32,
         ))

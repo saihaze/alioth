@@ -125,6 +125,9 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
                     let action = state.handle_input(event);
                     match action {
                         Action::ChangeVt(_) | Action::None => (),
+                        Action::Quit => {
+                            state.loop_signal.stop();
+                        }
                     }
                 }
                 _ => (),
