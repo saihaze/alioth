@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
 use crate::{backend::Error, state::State};
 use drm::control::{connector, crtc, ModeTypeFlags};
@@ -22,6 +22,7 @@ use smithay::{
     utils::Transform,
 };
 use smithay_drm_extras::edid::EdidInfo;
+use std::time::Instant;
 
 use super::DrmData;
 
@@ -110,7 +111,7 @@ impl OutputSurface {
         })
     }
 
-    pub fn next_buffer<R>(&mut self, space: &Space<Window>, renderer: &mut R)
+    pub fn next_buffer<R>(&mut self, space: &Space<Window>, start_time: Instant, renderer: &mut R)
     where
         R: Renderer + ImportAll + Bind<Dmabuf>,
         R::TextureId: 'static,
@@ -129,6 +130,15 @@ impl OutputSurface {
             [0.1, 0.1, 0.1, 1.0],
         )
         .unwrap();
+
+        for window in space.elements() {
+            window.send_frame(
+                &self.output,
+                start_time.elapsed(),
+                Some(Duration::ZERO),
+                |_, _| Some(self.output.clone()),
+            );
+        }
 
         self.gbm_surface.queue_buffer(None, res.damage, ()).ok();
     }
