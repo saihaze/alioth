@@ -129,7 +129,6 @@ impl OutputSurface {
             [0.1, 0.1, 0.1, 1.0],
         )
         .unwrap();
-        tracing::info!("Damage: {:?}", res);
 
         self.gbm_surface.queue_buffer(None, res.damage, ()).ok();
     }
