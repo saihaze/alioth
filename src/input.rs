@@ -1,11 +1,11 @@
 use smithay::{
     backend::input::{
         AbsolutePositionEvent, ButtonState, Event, InputBackend, InputEvent, KeyboardKeyEvent,
-        PointerButtonEvent,
+        PointerButtonEvent, PointerMotionEvent,
     },
     input::{
         keyboard::{xkb, FilterResult, Keysym, ModifiersState},
-        pointer::{ButtonEvent, MotionEvent},
+        pointer::{ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
     utils::SERIAL_COUNTER,
 };
@@ -48,6 +48,32 @@ impl<BackendData> State<BackendData> {
                         )
                         .unwrap_or(Action::None);
                     return action;
+                }
+            }
+            InputEvent::PointerMotion { event } => {
+                if let Some(pointer) = self.seat.get_pointer() {
+                    let new_location = pointer.current_location() + event.delta();
+
+                    let serial = SERIAL_COUNTER.next_serial();
+                    let under = self.surface_under_pointer(&pointer);
+                    pointer.motion(
+                        self,
+                        under.clone(),
+                        &MotionEvent {
+                            location: new_location,
+                            serial,
+                            time: event.time_msec(),
+                        },
+                    );
+                    pointer.relative_motion(
+                        self,
+                        under,
+                        &RelativeMotionEvent {
+                            delta: event.delta(),
+                            delta_unaccel: event.delta_unaccel(),
+                            utime: event.time(),
+                        },
+                    );
                 }
             }
             InputEvent::PointerMotionAbsolute { event } => {
