@@ -56,6 +56,12 @@ impl<BackendData> State<BackendData> {
 
                     let serial = SERIAL_COUNTER.next_serial();
                     let under = self.surface_under_pointer(&pointer);
+
+                    let output_under = self.space.output_under(new_location).next();
+                    if output_under.is_none() {
+                        return Action::None;
+                    }
+                    
                     pointer.motion(
                         self,
                         under.clone(),
