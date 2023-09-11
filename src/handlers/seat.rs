@@ -14,6 +14,8 @@ impl<BackendData: 'static> SeatHandler for State<BackendData> {
         &mut self.seat_state
     }
 
-    fn cursor_image(&mut self, _seat: &Seat<Self>, _image: CursorImageStatus) {}
+    fn cursor_image(&mut self, _seat: &Seat<Self>, image: CursorImageStatus) {
+        self.cursor_status = image;
+    }
 }
 delegate_seat!(@<BackendData: 'static> State<BackendData>);

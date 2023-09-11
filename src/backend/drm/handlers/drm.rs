@@ -40,7 +40,14 @@ impl State<DrmData> {
                                 .unwrap()
                         };
                         surface.gbm_surface.frame_submitted().unwrap();
-                        surface.next_buffer(&self.space, self.start_time, &mut renderer);
+                        surface.next_buffer(
+                            &self.space,
+                            self.start_time,
+                            &mut renderer,
+                            self.seat.get_pointer().as_ref(),
+                            &self.clock,
+                            self.cursor_status.clone(),
+                        );
                     }
                 }
             }
@@ -86,7 +93,14 @@ impl State<DrmData> {
                 )
                 .unwrap();
                 let output = surface.output.clone();
-                surface.next_buffer(&self.space, self.start_time, &mut renderer);
+                surface.next_buffer(
+                    &self.space,
+                    self.start_time,
+                    &mut renderer,
+                    self.seat.get_pointer().as_ref(),
+                    &self.clock,
+                    self.cursor_status.clone(),
+                );
                 device.surfaces.insert(crtc, surface);
                 self.map_output_on_the_right(output);
             }

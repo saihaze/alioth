@@ -5,6 +5,7 @@ use smithay::{reexports::calloop::EventLoop, wayland::socket::ListeningSocketSou
 use std::sync::Arc;
 
 mod backend;
+mod cursor;
 mod data;
 mod handlers;
 mod input;

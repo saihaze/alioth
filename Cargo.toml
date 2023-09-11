@@ -12,3 +12,4 @@ smithay-drm-extras = { git = "https://github.com/Smithay/smithay" }
 thiserror = "1.0.47"
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
+xcursor = "0.3.4"

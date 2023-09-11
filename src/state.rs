@@ -2,13 +2,16 @@ use std::time::Instant;
 
 use smithay::{
     desktop::{Space, Window, WindowSurfaceType},
-    input::{pointer::PointerHandle, Seat, SeatState},
+    input::{
+        pointer::{CursorImageStatus, PointerHandle},
+        Seat, SeatState,
+    },
     output::Output,
     reexports::{
         calloop::{EventLoop, LoopSignal},
         wayland_server::{protocol::wl_surface::WlSurface, Display},
     },
-    utils::{Logical, Point},
+    utils::{Clock, Logical, Monotonic, Point},
     wayland::{
         compositor::CompositorState, data_device::DataDeviceState, output::OutputManagerState,
         shell::xdg::XdgShellState, shm::ShmState,
@@ -25,6 +28,8 @@ pub enum Error {
 
 pub struct State<BackendData: 'static> {
     pub start_time: Instant,
+    pub clock: Clock<Monotonic>,
+
     pub loop_signal: LoopSignal,
 
     pub compositor_state: CompositorState,
@@ -36,6 +41,7 @@ pub struct State<BackendData: 'static> {
     pub seat: Seat<Self>,
 
     pub space: Space<Window>,
+    pub cursor_status: CursorImageStatus,
 
     pub backend_data: BackendData,
 }
@@ -73,6 +79,8 @@ impl<BackendData> State<BackendData> {
         // Pack the state.
         let state = State {
             start_time: Instant::now(),
+            clock: Clock::new().unwrap(),
+
             loop_signal: event_loop.get_signal(),
 
             compositor_state,
@@ -84,6 +92,7 @@ impl<BackendData> State<BackendData> {
             seat,
 
             space,
+            cursor_status: CursorImageStatus::Default,
 
             backend_data,
         };

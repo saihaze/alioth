@@ -61,7 +61,7 @@ impl<BackendData> State<BackendData> {
                     if output_under.is_none() {
                         return Action::None;
                     }
-                    
+
                     pointer.motion(
                         self,
                         under.clone(),

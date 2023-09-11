@@ -1,6 +1,10 @@
 use std::{collections::HashSet, time::Duration};
 
-use crate::{backend::Error, state::State};
+use crate::{
+    backend::Error,
+    cursor::{CursorElement, PointerRenderElement},
+    state::State,
+};
 use drm::control::{connector, crtc, ModeTypeFlags};
 use drm_fourcc::{DrmFormat, DrmFourcc};
 
@@ -12,14 +16,15 @@ use smithay::{
         },
         drm::{DrmDevice, DrmDeviceFd, GbmBufferedSurface},
         renderer::{
-            damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement, Bind,
-            ImportAll, Renderer,
+            damage::OutputDamageTracker, element::AsRenderElements, Bind, ImportAll, ImportMem,
+            Renderer,
         },
     },
     desktop::{space::render_output, Space, Window},
+    input::pointer::{CursorImageStatus, PointerHandle},
     output::{Mode, Output, PhysicalProperties, Scale, Subpixel},
     reexports::wayland_server::DisplayHandle,
-    utils::Transform,
+    utils::{Clock, Monotonic, Transform},
 };
 use smithay_drm_extras::edid::EdidInfo;
 use std::time::Instant;
@@ -30,6 +35,7 @@ pub struct OutputSurface {
     pub gbm_surface: GbmBufferedSurface<GbmAllocator<DrmDeviceFd>, ()>,
     pub output: Output,
     pub damage_tracked_renderer: OutputDamageTracker,
+    pub cursor: CursorElement,
 }
 
 impl OutputSurface {
@@ -108,24 +114,57 @@ impl OutputSurface {
             gbm_surface,
             output,
             damage_tracked_renderer,
+            cursor: CursorElement::new().map_err(|err| Error::CursorLoadError(err))?,
         })
     }
 
-    pub fn next_buffer<R>(&mut self, space: &Space<Window>, start_time: Instant, renderer: &mut R)
-    where
-        R: Renderer + ImportAll + Bind<Dmabuf>,
-        R::TextureId: 'static,
+    pub fn next_buffer<R>(
+        &mut self,
+        space: &Space<Window>,
+        start_time: Instant,
+        renderer: &mut R,
+        pointer: Option<&PointerHandle<State<DrmData>>>,
+        clock: &Clock<Monotonic>,
+        cursor_status: CursorImageStatus,
+    ) where
+        R: Renderer + ImportAll + ImportMem + Bind<Dmabuf>,
+        R::TextureId: 'static + Clone,
     {
         let dmabuf = self.gbm_surface.next_buffer().unwrap().0;
         renderer.bind(dmabuf).unwrap();
 
-        let res = render_output::<_, WaylandSurfaceRenderElement<R>, _, _>(
+        let cursor_elements = match pointer {
+            Some(pointer) => {
+                if space
+                    .output_under(pointer.current_location())
+                    .find(|output| **output == self.output)
+                    .is_some()
+                {
+                    let scale = self.output.current_scale().fractional_scale();
+
+                    self.cursor.update_animation_status(clock);
+                    self.cursor.set_status(cursor_status);
+
+                    self.cursor.render_elements::<PointerRenderElement<R>>(
+                        renderer,
+                        pointer.current_location().to_physical(scale).to_i32_round(),
+                        scale.into(),
+                        1.0,
+                    )
+                } else {
+                    Vec::new()
+                }
+            }
+            None => Vec::new(),
+        };
+
+        let res = render_output::<_, PointerRenderElement<R>, _, _>(
             &self.output,
             renderer,
             1.0,
             0,
             [space],
-            &[],
+            cursor_elements.as_slice(),
             &mut self.damage_tracked_renderer,
             [0.1, 0.1, 0.1, 1.0],
         )

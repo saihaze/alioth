@@ -1,12 +1,18 @@
 mod drm;
 mod winit;
 
-use crate::state::{self};
+use crate::{
+    cursor,
+    state::{self},
+};
 
 use self::{drm::run_drm_backend, winit::run_winit_backend};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("{0}")]
+    CursorLoadError(cursor::Error),
+
     #[error("Failed to create Wayland display")]
     DisplayCreateFailure,
 
