@@ -1,13 +1,14 @@
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     delegate_compositor,
+    desktop::PopupKind,
     reexports::wayland_server::{protocol::wl_surface::WlSurface, Client},
     wayland::{
         compositor::{
             get_parent, is_sync_subsurface, with_states, CompositorClientState, CompositorHandler,
             CompositorState,
         },
-        shell::xdg::XdgToplevelSurfaceData,
+        shell::xdg::{XdgPopupSurfaceData, XdgToplevelSurfaceData},
     },
 };
 
@@ -39,13 +40,12 @@ impl<BackendData> CompositorHandler for State<BackendData> {
             }
         }
 
-        let window = self
+        if let Some(window) = self
             .space
             .elements()
             .find(|w| w.toplevel().wl_surface() == surface)
-            .cloned();
-
-        if let Some(window) = window {
+            .cloned()
+        {
             let initial_configure_sent = with_states(surface, |states| {
                 states
                     .data_map
@@ -58,6 +58,20 @@ impl<BackendData> CompositorHandler for State<BackendData> {
 
             if !initial_configure_sent {
                 window.toplevel().send_configure();
+            }
+        } else if let Some(popup) = self.popups.find_popup(surface) {
+            let PopupKind::Xdg(ref popup) = popup;
+            let initial_configure_sent = with_states(surface, |states| {
+                states
+                    .data_map
+                    .get::<XdgPopupSurfaceData>()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .initial_configure_sent
+            });
+            if !initial_configure_sent {
+                popup.send_configure().unwrap();
             }
         }
     }

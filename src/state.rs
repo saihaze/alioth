@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use smithay::{
-    desktop::{Space, Window, WindowSurfaceType},
+    desktop::{PopupManager, Space, Window, WindowSurfaceType},
     input::{
         pointer::{CursorImageStatus, PointerHandle},
         Seat, SeatState,
@@ -39,6 +39,7 @@ pub struct State<BackendData: 'static> {
     pub seat_state: SeatState<Self>,
     pub data_device_state: DataDeviceState,
     pub seat: Seat<Self>,
+    pub popups: PopupManager,
 
     pub space: Space<Window>,
     pub cursor_status: CursorImageStatus,
@@ -90,6 +91,7 @@ impl<BackendData> State<BackendData> {
             seat_state,
             data_device_state,
             seat,
+            popups: PopupManager::default(),
 
             space,
             cursor_status: CursorImageStatus::Default,

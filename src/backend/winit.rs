@@ -161,7 +161,9 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
                     |_, _| Some(output.clone()),
                 );
             }
+            
             state.space.refresh();
+            state.popups.cleanup();
             display.flush_clients().unwrap();
 
             TimeoutAction::ToDuration(Duration::from_millis(16))

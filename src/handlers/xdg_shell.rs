@@ -1,6 +1,6 @@
 use smithay::{
     delegate_xdg_shell,
-    desktop::Window,
+    desktop::{Window, PopupKind},
     reexports::wayland_server::protocol::wl_seat::WlSeat,
     utils::Serial,
     wayland::shell::xdg::{
@@ -21,10 +21,13 @@ impl<BackendData> XdgShellHandler for State<BackendData> {
     }
 
     fn toplevel_destroyed(&mut self, _surface: ToplevelSurface) {
+        self.popups.cleanup();
         self.space.refresh();
     }
 
-    fn new_popup(&mut self, _surface: PopupSurface, _positioner: PositionerState) {}
+    fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {
+        self.popups.track_popup(PopupKind::Xdg(surface)).ok();
+    }
 
     fn grab(&mut self, _surface: PopupSurface, _seat: WlSeat, _serial: Serial) {}
 }
