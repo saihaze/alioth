@@ -1,11 +1,11 @@
 use smithay::{
     backend::input::{
-        AbsolutePositionEvent, ButtonState, Event, InputBackend, InputEvent, KeyboardKeyEvent,
-        PointerButtonEvent, PointerMotionEvent,
+        AbsolutePositionEvent, Axis, AxisSource, ButtonState, Event, InputBackend, InputEvent,
+        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
     },
     input::{
         keyboard::{xkb, FilterResult, Keysym, ModifiersState},
-        pointer::{ButtonEvent, MotionEvent, RelativeMotionEvent},
+        pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
     utils::SERIAL_COUNTER,
 };
@@ -102,6 +102,42 @@ impl<BackendData> State<BackendData> {
                             time: event.time_msec(),
                         },
                     );
+                }
+            }
+            InputEvent::PointerAxis { event } => {
+                let source = event.source();
+
+                let horizontal_amount = event.amount(Axis::Horizontal).unwrap_or_else(|| {
+                    event.amount_discrete(Axis::Horizontal).unwrap_or(0.0) * 3.0
+                });
+                let vertical_amount = event
+                    .amount(Axis::Vertical)
+                    .unwrap_or_else(|| event.amount_discrete(Axis::Vertical).unwrap_or(0.0) * 3.0);
+
+                let horizontal_amount_discrete = event.amount_discrete(Axis::Horizontal);
+                let vertical_amount_discrete = event.amount_discrete(Axis::Vertical);
+
+                let mut frame = AxisFrame::new(event.time_msec()).source(source);
+
+                if horizontal_amount != 0.0 {
+                    frame = frame.value(Axis::Horizontal, horizontal_amount);
+                    if let Some(discrete) = horizontal_amount_discrete {
+                        frame = frame.discrete(Axis::Horizontal, discrete as i32);
+                    } else if source == AxisSource::Finger {
+                        frame = frame.stop(Axis::Horizontal);
+                    }
+                }
+                if vertical_amount != 0.0 {
+                    frame = frame.value(Axis::Vertical, vertical_amount);
+                    if let Some(discrete) = vertical_amount_discrete {
+                        frame = frame.discrete(Axis::Vertical, discrete as i32);
+                    } else if source == AxisSource::Finger {
+                        frame = frame.stop(Axis::Vertical);
+                    }
+                }
+
+                if let Some(pointer) = self.seat.get_pointer() {
+                    pointer.axis(self, frame);
                 }
             }
             InputEvent::PointerButton { event } => {
