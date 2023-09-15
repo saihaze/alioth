@@ -7,6 +7,7 @@ use std::sync::Arc;
 mod backend;
 mod cursor;
 mod data;
+mod grabs;
 mod handlers;
 mod input;
 mod state;
