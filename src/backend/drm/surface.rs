@@ -20,11 +20,12 @@ use smithay::{
             Renderer,
         },
     },
-    desktop::{space::render_output, Space, Window},
+    desktop::{space::render_output, utils::surface_primary_scanout_output, Space, Window},
     input::pointer::{CursorImageStatus, PointerHandle},
     output::{Mode, Output, PhysicalProperties, Scale, Subpixel},
     reexports::wayland_server::DisplayHandle,
     utils::{Clock, Monotonic, Transform},
+    wayland::compositor::{self, SurfaceData},
 };
 use smithay_drm_extras::edid::EdidInfo;
 use std::time::Instant;
@@ -171,12 +172,19 @@ impl OutputSurface {
         .unwrap();
 
         for window in space.elements() {
-            window.send_frame(
-                &self.output,
-                start_time.elapsed(),
-                Some(Duration::ZERO),
-                |_, _| Some(self.output.clone()),
-            );
+            let output = compositor::with_states(window.toplevel().wl_surface(), |states| {
+                let data = states.data_map.get::<SurfaceData>().unwrap();
+                surface_primary_scanout_output(window.toplevel().wl_surface(), data)
+            });
+
+            if output == Some(self.output.clone()) {
+                window.send_frame(
+                    &self.output,
+                    start_time.elapsed(),
+                    Some(Duration::ZERO),
+                    |_, _| Some(self.output.clone()),
+                );
+            }
         }
 
         self.gbm_surface.queue_buffer(None, res.damage, ()).ok();
