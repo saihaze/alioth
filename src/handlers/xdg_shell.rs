@@ -5,17 +5,23 @@ use smithay::{
         pointer::{Focus, GrabStartData},
         Seat,
     },
-    reexports::wayland_server::{
-        protocol::{wl_seat::WlSeat, wl_surface::WlSurface},
-        Resource,
+    reexports::{
+        wayland_protocols::xdg::shell::server::xdg_toplevel,
+        wayland_server::{
+            protocol::{wl_seat::WlSeat, wl_surface::WlSurface},
+            Resource,
+        },
     },
-    utils::Serial,
+    utils::{Rectangle, Serial},
     wayland::shell::xdg::{
         PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler, XdgShellState,
     },
 };
 
-use crate::{grabs::MoveSurfaceGrab, state::State};
+use crate::{
+    grabs::{resize_grab::ResizeSurfaceGrab, MoveSurfaceGrab},
+    state::State,
+};
 
 impl<BackendData> XdgShellHandler for State<BackendData> {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
@@ -57,6 +63,50 @@ impl<BackendData> XdgShellHandler for State<BackendData> {
                 window,
                 initial_location,
             };
+
+            pointer.set_grab(self, grab, serial, Focus::Clear);
+        }
+    }
+
+    fn resize_request(
+        &mut self,
+        surface: ToplevelSurface,
+        seat: WlSeat,
+        serial: Serial,
+        edges: xdg_toplevel::ResizeEdge,
+    ) {
+        let seat: Seat<Self> = Seat::from_resource(&seat).unwrap();
+
+        let wl_surface = surface.wl_surface();
+
+        if let Some(start_data) = check_grab(&seat, wl_surface, serial) {
+            let pointer = if let Some(pointer) = seat.get_pointer() {
+                pointer
+            } else {
+                return;
+            };
+
+            let window = self
+                .space
+                .elements()
+                .find(|w| w.toplevel().wl_surface() == wl_surface)
+                .cloned()
+                .unwrap();
+
+            let initial_window_location = self.space.element_location(&window).unwrap();
+            let initial_window_size = window.geometry().size;
+
+            surface.with_pending_state(|state| {
+                state.states.set(xdg_toplevel::State::Resizing);
+            });
+            surface.send_pending_configure();
+
+            let grab = ResizeSurfaceGrab::start(
+                start_data,
+                window,
+                edges.into(),
+                Rectangle::from_loc_and_size(initial_window_location, initial_window_size),
+            );
 
             pointer.set_grab(self, grab, serial, Focus::Clear);
         }

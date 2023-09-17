@@ -12,7 +12,7 @@ use smithay::{
     },
 };
 
-use crate::{data::ClientData, state::State};
+use crate::{data::ClientData, grabs::resize_grab, state::State};
 
 impl<BackendData> CompositorHandler for State<BackendData> {
     fn compositor_state(&mut self) -> &mut CompositorState {
@@ -74,6 +74,8 @@ impl<BackendData> CompositorHandler for State<BackendData> {
                 popup.send_configure().unwrap();
             }
         }
+
+        resize_grab::handle_commit(&mut self.space, surface);
     }
 }
 delegate_compositor!(@<BackendData: 'static> State<BackendData>);

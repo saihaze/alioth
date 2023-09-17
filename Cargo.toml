@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
+bitflags = "2.4.0"
 drm = "0.9.0"
 drm-fourcc = "2.2.0"
 smithay = { git = "https://github.com/Smithay/smithay", version = "0.3.0", rev = "e241ccbb" }
