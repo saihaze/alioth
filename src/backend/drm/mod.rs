@@ -1,5 +1,6 @@
-mod handlers;
+mod rendering;
 mod surface;
+mod udev;
 
 use drm::control::crtc;
 

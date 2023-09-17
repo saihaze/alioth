@@ -1,2 +1,0 @@
-mod drm;
-mod udev;
