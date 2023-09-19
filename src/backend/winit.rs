@@ -124,6 +124,7 @@ pub fn run_winit_backend() -> Result<(), Box<dyn std::error::Error>> {
                 WinitEvent::Input(event) => {
                     let action = state.handle_input(event);
                     match action {
+                        // It doesn't make sense to change VT on the Winit backend.
                         Action::ChangeVt(_) | Action::None => (),
                         Action::Quit => {
                             state.loop_signal.stop();

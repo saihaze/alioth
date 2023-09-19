@@ -13,12 +13,17 @@ use smithay::{
 use crate::state::State;
 
 pub enum Action {
+    /// Nothing to do, for example when a keyboard event is passed to the client.
     None,
+    /// Ctrl-Alt-Fx, to change tty.
     ChangeVt(i32),
+    /// Ctrl-Alt-Backspace, to exit the compositor.
     Quit,
 }
 
 impl<BackendData> State<BackendData> {
+    /// Whenever an input event is occurred, pass it to this function, no matter whether it is a
+    /// Winit one or a Libinput one.
     pub fn handle_input<B>(&mut self, event: InputEvent<B>) -> Action
     where
         B: InputBackend,
@@ -50,6 +55,7 @@ impl<BackendData> State<BackendData> {
                     return action;
                 }
             }
+            // When a pointer moves, for the DRM backend.
             InputEvent::PointerMotion { event } => {
                 if let Some(pointer) = self.seat.get_pointer() {
                     let new_location = pointer.current_location() + event.delta();
@@ -82,6 +88,7 @@ impl<BackendData> State<BackendData> {
                     );
                 }
             }
+            // When a pointer moves, for the Winit backend.
             InputEvent::PointerMotionAbsolute { event } => {
                 if let Some(pointer) = self.seat.get_pointer() {
                     let output = match self.space.output_under(pointer.current_location()).next() {
@@ -104,6 +111,7 @@ impl<BackendData> State<BackendData> {
                     );
                 }
             }
+            // When a mouse wheel rolls.
             InputEvent::PointerAxis { event } => {
                 let source = event.source();
 
@@ -140,6 +148,7 @@ impl<BackendData> State<BackendData> {
                     pointer.axis(self, frame);
                 }
             }
+            // When a mouse button is pressed or released.
             InputEvent::PointerButton { event } => {
                 if let Some(pointer) = self.seat.get_pointer() {
                     let button = event.button_code();
@@ -192,6 +201,7 @@ impl<BackendData> State<BackendData> {
     }
 }
 
+/// Checks if a keyboard shortcut is tiggered.
 fn process_keyboard_shortcut(modifiers: &ModifiersState, keysym: Keysym) -> Option<Action> {
     if keysym == xkb::KEY_BackSpace && modifiers.ctrl && modifiers.alt {
         Some(Action::Quit)

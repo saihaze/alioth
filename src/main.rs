@@ -46,6 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logger.
     tracing_subscriber::fmt().init();
 
+    // Automatically decide the suitable backend and run it.
     run_backend_auto()?;
 
     Ok(())

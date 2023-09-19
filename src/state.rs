@@ -116,6 +116,8 @@ impl<BackendData> State<BackendData> {
             })
     }
 
+    /// Currenty there's no proper muti-output support. So we simply put the new output on the
+    /// right. Soon an output manager will be implemented.
     pub fn map_output_on_the_right(&mut self, output: Output) {
         let x = self.space.outputs().fold(0, |sum, output| {
             sum + self.space.output_geometry(output).unwrap().size.w

@@ -119,6 +119,7 @@ impl OutputSurface {
         })
     }
 
+    /// Draw a frame and queue the buffer.
     pub fn next_buffer<R>(
         &mut self,
         space: &Space<Window>,

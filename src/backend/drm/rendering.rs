@@ -20,6 +20,7 @@ const SUPPORTED_FORMATS: &[DrmFourcc] = &[
 impl State<DrmData> {
     pub fn on_drm_event(&mut self, node: DrmNode, event: DrmEvent) {
         match event {
+            // When a new frame should be rendered.
             DrmEvent::VBlank(crtc) => {
                 if let Some(device) = self.backend_data.devices.get_mut(&node) {
                     if let Some(surface) = device.surfaces.get_mut(&crtc) {
